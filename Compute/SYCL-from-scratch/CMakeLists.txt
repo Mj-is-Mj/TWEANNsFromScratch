@@ -17,9 +17,8 @@ find_package(Magnum REQUIRED GL Sdl2Application Shaders Primitives Trade)
 find_package(MagnumIntegration REQUIRED ImGui)
 
 ### SYCL
-include(cmake/ConfigureSYCL.cmake)
-
+include(SYCLBackendConfig.cmake)
 
 
 ### Modules
-add_subdirectory(src/Test)
+add_subdirectory(src/Baseline)
