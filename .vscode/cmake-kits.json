@@ -1,0 +1,12 @@
+[
+  {
+    "name": "Intel oneAPI SYCL",
+    "compilers": {
+      "CXX": "icpx",
+      "C": "icx"
+    },
+    "environmentVariables": {
+      "PATH": "/opt/intel/oneapi/compiler/latest/bin:${env:PATH}"
+    }
+  }
+]

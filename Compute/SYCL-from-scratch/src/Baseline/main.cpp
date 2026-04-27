@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdint>
 #include <cstdlib>
+#include <thread>
 
 // Magnum includes
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -17,28 +18,31 @@
 #include <Magnum/Trade/MeshData.h>
 
 // SYCL includes
-// none
+#include "noise.hpp"
 
 using namespace Magnum;
 
 constexpr PixelFormat PIXELFORMAT{PixelFormat::RGBA8Unorm};
 
-class TriangleExample : public Platform::Application {
+class PerlinNoiseApp : public Platform::Application {
     public:
-        explicit TriangleExample(const Arguments&);
+        explicit PerlinNoiseApp(const Arguments&);
     
     private:
         void drawEvent() override;
         void tickEvent() override;
         void remakeTexture();
+        void keyPressEvent(KeyEvent& event) override;
 
-        int _w, _h;
+        const int _w, _h;
         GL::Mesh _mesh;
         GL::Texture2D _tex;
         Shaders::FlatGL2D _shader;
+        NoiseEnv noise;
+        bool paused = true;
 };
 
-TriangleExample::TriangleExample(const Arguments& args) :
+PerlinNoiseApp::PerlinNoiseApp(const Arguments& args) :
     Platform::Application{
         args,
         Configuration{}.setTitle("Baseline Test")
@@ -55,71 +59,46 @@ TriangleExample::TriangleExample(const Arguments& args) :
         MeshTools::compile(
         Primitives::squareSolid(
         Primitives::SquareFlag::TextureCoordinates))
-    }
+    },
+    noise(_w, _h, 12)
 {
     remakeTexture();
 }
 
-void TriangleExample::drawEvent() {
+void PerlinNoiseApp::drawEvent() {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
-    _shader.draw(_mesh);
-    redraw();
-    swapBuffers();
-}
-
-uint64_t rando(uint64_t t) {
-    t ^= 0x9fb2b4c97fa7b4c3ull;
-
-    t = t * (t ^ (t >> 3));
-    t ^= 0x74c9b4c3fb2b7fa7ull;
-    t = t * (t ^ (t >> 7));
-
-    return t;
-}
-
-#define INFREQ 8
-void TriangleExample::tickEvent() {
-    static uint64_t t = 0;
-    t += 1;
-
-    uint64_t r = rando(t);
-    if (r % (1ul << INFREQ)) return;
-
-    struct Pixel { uint8_t r,g,b,a; };
-
-    r = rando(r);
-    Pixel p = {
-        (uint8_t)(r & 0x7F),
-        (uint8_t)((r >> 8) & 0x7F),
-        (uint8_t)((r >> 16) & 0x7F),
-        255
-    };
-
-    std::cout << (int)p.r << ", " << (int)p.g << ", " << (int)p.b << ", " << (int)p.a << std::endl;
-
-    Pixel* data = (Pixel*)malloc(sizeof(Pixel)*_h*_w);
-
-    // Could use a memset but eh
-    for (int i = 0; i < _h*_w; ++i) {
-        data[i] = p;
-    };
+    auto data = noise.render();
 
     ImageView2D img{
         PIXELFORMAT,
         {_w, _h},
         Corrade::Containers::ArrayView{
-            reinterpret_cast<const char*>(data),
+            data,
             _w * _h * pixelFormatSize(PIXELFORMAT)
         }
     };
 
     _tex.setSubImage(0, {0,0}, img);
 
-    free(data);
+
+    _shader.draw(_mesh);
+    redraw();
+    swapBuffers();
+
+    // ~60fps
+    std::cout << "."; fflush(stdout);
+    std::this_thread::sleep_for(std::chrono::milliseconds(150));
 }
 
-void TriangleExample::remakeTexture() {
+#define INFREQ 8
+void PerlinNoiseApp::tickEvent() {
+    if (paused) { return; }
+    noise.step();
+    std::cout << "STEP" << std::endl;
+}
+
+void PerlinNoiseApp::remakeTexture() {
     _tex.setWrapping(GL::SamplerWrapping::ClampToEdge)
         .setMagnificationFilter(GL::SamplerFilter::Nearest)
         .setMinificationFilter(GL::SamplerFilter::Nearest)
@@ -132,4 +111,12 @@ void TriangleExample::remakeTexture() {
     _shader.bindTexture(_tex);
 }
 
-MAGNUM_APPLICATION_MAIN(TriangleExample);
+void PerlinNoiseApp::keyPressEvent(KeyEvent& event) {
+    // (Un)pause on SPACE
+    if (event.key() == Sdl2Application::Key::Space) {
+        std::cout << "PAUSED: " << paused << std::endl;
+        paused = !paused;
+    }
+  }
+
+MAGNUM_APPLICATION_MAIN(PerlinNoiseApp);
