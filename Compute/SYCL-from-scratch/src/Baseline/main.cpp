@@ -88,14 +88,13 @@ void PerlinNoiseApp::drawEvent() {
     swapBuffers();
 
     // ~60fps
-    std::this_thread::sleep_for(std::chrono::milliseconds(150));
+    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 #define INFREQ 8
 void PerlinNoiseApp::tickEvent() {
     if (paused) { return; }
     noise.step();
-    std::cout << "."; fflush(stdout);
 }
 
 void PerlinNoiseApp::remakeTexture() {

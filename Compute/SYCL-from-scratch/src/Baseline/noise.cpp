@@ -32,8 +32,8 @@ NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
             sycl::range<2>(grid_width, grid_height),
             [=](sycl::item<2> item)
         {
-            w_racc[item] = sycl::float2(1.f, 0.f); // Equiv. to identity rotation
-            w_rvel[item] = sycl::float2(1.f, 0.f); // Equiv. to identity rotation
+            w_racc[item] = 0.f;
+            w_rvel[item] = 0.f;
             w_vec[item]  = sycl::float2(1.f, 0.f); // X axis
         });
     });
@@ -61,7 +61,6 @@ NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
 }
 
 void NoiseEnv::step() {
-
     step_num += 1;
     
     q.submit([&](sycl::handler& cgh) {
@@ -79,47 +78,42 @@ void NoiseEnv::step() {
             [=](sycl::item<2> item) 
         {
             // Get rotational acceleration vector
-            sycl::float2 racc = r_racc[item];
+            const float racc = r_racc[item];
             // Get rotational velocity vector
-            sycl::float2 rvel  = rw_rvel[item];
+            float rvel  = rw_rvel[item];
             // Rotate further
-            rvel = sycl::float2(
-                rvel.x() * racc.x()
-                 - rvel.y() * racc.y(),
-                rvel.x() * racc.y()
-                 + rvel.y() * racc.x()
-            );
-
-            // Weight velocity towards 0deg
-            rvel += sycl::float2(VLS, 0.f);
-
-            // // Normalize and assign
-            rvel /= rvel.x()*rvel.x() + rvel.y()*rvel.y();
+            rvel += racc;
+            // Limit
+            rvel /= (1.f + VLS);
+            // Reassign
             rw_rvel[item] = rvel;
 
+            // Compute rotation values
+            const float rcos = sycl::cos(rvel);
+            const float rsin = sycl::sin(rvel);
 
-            // Rotate main grid vectors
+
+            // Get main grid vectors
             sycl::float2 mvec = rw_vec[item];
+            // Rotate
             mvec = sycl::float2(
-                mvec.x() * rw_rvel[item].x()
-                 - mvec.y() * rw_rvel[item].y(),
-                mvec.x() * rw_rvel[item].y()
-                 + mvec.y() * rw_rvel[item].x()
+                mvec.x()*rcos - mvec.y()*rsin,
+                mvec.x()*rsin + mvec.y()*rcos
             );
+
 
             // Normalize for good measure
             mvec /= mvec.x()*mvec.x() + mvec.y()*mvec.y();
+            // Reassign
             rw_vec[item] = mvec;
         });
 
     });
 
-    if (step_num % 8 == 0) randomize();
+    if (step_num % 64 == 0) randomize();
 }
 
 void NoiseEnv::randomize() {
-    std::cout << "RANDO" << std::endl;
-
     // Semi-random initial value
     size_t s = step_num + 17;
     s *= 35317; // large prime number
@@ -148,14 +142,12 @@ void NoiseEnv::randomize() {
 
             // Random integer float using 16 bits of `r`
             float theta = float(r & 0xFFFF);
-            theta /= float(0xFFFF); // Scale to [0,1)
+            theta /= float(0x8000); // Scale to [0,2)
+            theta -= 1;
             theta *= MAX_THETA;
 
             // Turn random angle direction vector
-            w_racc[item] = sycl::float2(
-                sycl::cos(theta),
-                sycl::sin(theta)
-            );
+            w_racc[item] = theta;
         });
     });
 }
@@ -241,7 +233,7 @@ const char* NoiseEnv::render() {
 
 const char* NoiseEnv::debugRender() {
     q.submit([&](sycl::handler& cgh) {
-        auto r_input = rvel_grid.get_access<mode::read>(cgh);
+        auto r_input = vec_grid.get_access<mode::read>(cgh);
         auto w_img   = img.write().get_access<mode::write>(cgh);
 
         const size_t image_width  = im_width;
@@ -265,6 +257,9 @@ const char* NoiseEnv::debugRender() {
             size_t gy = iy / ystride;
 
             sycl::float2 g = r_input[sycl::id<2>(gx,gy)];
+            // g *= INV_PIPI;
+            // g += 0.5f;
+            // g -= sycl::floor(g);
 
             // size_t on = ((ix/xstride) + (iy/ystride)) % 2;
 
