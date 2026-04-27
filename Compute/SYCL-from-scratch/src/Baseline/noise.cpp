@@ -61,6 +61,8 @@ NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
 }
 
 void NoiseEnv::step() {
+
+    step_num += 1;
     
     q.submit([&](sycl::handler& cgh) {
         auto r_racc  = racc_grid.get_access<mode::read>(cgh);
@@ -76,19 +78,22 @@ void NoiseEnv::step() {
             sycl::range<2>(grid_width, grid_height),
             [=](sycl::item<2> item) 
         {
-            // Get rotated velocity vector
+            // Get rotational acceleration vector
+            sycl::float2 racc = r_racc[item];
+            // Get rotational velocity vector
             sycl::float2 rvel  = rw_rvel[item];
+            // Rotate further
             rvel = sycl::float2(
-                rvel.x() * r_racc[item].x()
-                 - rvel.y() * r_racc[item].y(),
-                rvel.x() * r_racc[item].y()
-                 + rvel.y() * r_racc[item].x()
+                rvel.x() * racc.x()
+                 - rvel.y() * racc.y(),
+                rvel.x() * racc.y()
+                 + rvel.y() * racc.x()
             );
 
             // Weight velocity towards 0deg
             rvel += sycl::float2(VLS, 0.f);
 
-            // Normalize and assign
+            // // Normalize and assign
             rvel /= rvel.x()*rvel.x() + rvel.y()*rvel.y();
             rw_rvel[item] = rvel;
 
@@ -113,7 +118,7 @@ void NoiseEnv::step() {
 }
 
 void NoiseEnv::randomize() {
-    step_num += 1;
+    std::cout << "RANDO" << std::endl;
 
     // Semi-random initial value
     size_t s = step_num + 17;
@@ -144,7 +149,7 @@ void NoiseEnv::randomize() {
             // Random integer float using 16 bits of `r`
             float theta = float(r & 0xFFFF);
             theta /= float(0xFFFF); // Scale to [0,1)
-            theta *= 2.f*3.1415926535f; // Scale to [0,2pi]
+            theta *= MAX_THETA;
 
             // Turn random angle direction vector
             w_racc[item] = sycl::float2(
@@ -234,3 +239,52 @@ const char* NoiseEnv::render() {
     );
 }
 
+const char* NoiseEnv::debugRender() {
+    q.submit([&](sycl::handler& cgh) {
+        auto r_input = rvel_grid.get_access<mode::read>(cgh);
+        auto w_img   = img.write().get_access<mode::write>(cgh);
+
+        const size_t image_width  = im_width;
+        const size_t image_height = im_height;
+
+        const auto grange = r_input.get_range();
+        const size_t gwidth  = grange.get(0);
+        const size_t gheight = grange.get(1);
+
+        const size_t xstride = ( (image_width -1) / gwidth  ) + 1;
+        const size_t ystride = ( (image_height-1) / gheight ) + 1;
+
+        cgh.parallel_for(
+            sycl::range<2>(image_width, image_height),
+            [=](sycl::item<2> item)
+        {
+            size_t ix = item.get_id(0);
+            size_t iy = item.get_id(1);
+
+            size_t gx = ix / xstride;
+            size_t gy = iy / ystride;
+
+            sycl::float2 g = r_input[sycl::id<2>(gx,gy)];
+
+            // size_t on = ((ix/xstride) + (iy/ystride)) % 2;
+
+            float vx = (g.x()*0.5f) + 0.5f; 
+            float vy = (g.y()*0.5f) + 0.5f;
+
+            w_img[item] = sycl::uchar4(
+                static_cast<unsigned char>(255*(vx)),
+                static_cast<unsigned char>(255*(vy)),
+                static_cast<unsigned char>(255*(0)),
+                static_cast<unsigned char>(255*(1))
+            );
+        });
+        
+    });
+
+    img.swap();
+
+    auto acc = img.read().get_host_access(sycl::read_only);
+    return reinterpret_cast<const char*>(
+        acc.get_pointer()
+    );
+}

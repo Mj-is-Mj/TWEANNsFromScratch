@@ -17,7 +17,9 @@ static auto constexpr Q_LAMBDA = [](sycl::exception_list el) {
 class NoiseEnv {
 
     public:
-        static constexpr float VLS = 0.1f; // Velocity limiter strength
+        static constexpr float PIPI = 2.f*3.1415926535f;
+        static constexpr float MAX_THETA = 0.03f*PIPI;
+        static constexpr float VLS = MAX_THETA*2.f; // Velocity limiter strength
         const size_t vg_width, vg_height;
         const size_t im_width, im_height;
         const size_t grid_stride;
@@ -33,6 +35,9 @@ class NoiseEnv {
 
         // Renders image using perlin noise
         const char* render();
+
+        // Debug rendering
+        const char* debugRender();
 
         // Returns a pointer to the image data
         const char* getImg(size_t* s=nullptr);

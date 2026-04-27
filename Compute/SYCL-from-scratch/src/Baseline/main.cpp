@@ -60,15 +60,16 @@ PerlinNoiseApp::PerlinNoiseApp(const Arguments& args) :
         Primitives::squareSolid(
         Primitives::SquareFlag::TextureCoordinates))
     },
-    noise(_w, _h, 12)
+    noise(_h, _w, 12)
 {
+    // setWindowSize(Vector2i(_w,_h));
     remakeTexture();
 }
 
 void PerlinNoiseApp::drawEvent() {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
-    auto data = noise.render();
+    auto data = noise.debugRender();
 
     ImageView2D img{
         PIXELFORMAT,
@@ -87,7 +88,6 @@ void PerlinNoiseApp::drawEvent() {
     swapBuffers();
 
     // ~60fps
-    std::cout << "."; fflush(stdout);
     std::this_thread::sleep_for(std::chrono::milliseconds(150));
 }
 
@@ -95,7 +95,7 @@ void PerlinNoiseApp::drawEvent() {
 void PerlinNoiseApp::tickEvent() {
     if (paused) { return; }
     noise.step();
-    std::cout << "STEP" << std::endl;
+    std::cout << "."; fflush(stdout);
 }
 
 void PerlinNoiseApp::remakeTexture() {
