@@ -21,7 +21,7 @@ class NoiseEnv {
         static constexpr float INV_PIPI = 1.f / PIPI;
 
         static constexpr size_t STEPS_PER_RANDO = 12;
-        static constexpr float MAX_THETA = 0.001f*PIPI / float(STEPS_PER_RANDO);
+        static constexpr float MAX_THETA = 0.01f*PIPI / float(STEPS_PER_RANDO);
         static constexpr float VLS = MAX_THETA*8.f; // Velocity limiter strength
 
         const size_t vg_width, vg_height;

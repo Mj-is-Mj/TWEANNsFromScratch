@@ -60,7 +60,7 @@ PerlinNoiseApp::PerlinNoiseApp(const Arguments& args) :
         Primitives::squareSolid(
         Primitives::SquareFlag::TextureCoordinates))
     },
-    noise(_h, _w, 100)
+    noise(_h, _w, 48)
 {
     // setWindowSize(Vector2i(_w,_h));
     remakeTexture();
@@ -88,10 +88,9 @@ void PerlinNoiseApp::drawEvent() {
     swapBuffers();
 
     // ~60fps
-    // std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    std::this_thread::sleep_for(std::chrono::milliseconds(16));
 }
 
-#define INFREQ 8
 void PerlinNoiseApp::tickEvent() {
     if (paused) { return; }
     noise.step();

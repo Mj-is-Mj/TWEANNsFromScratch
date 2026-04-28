@@ -7,8 +7,8 @@ using sycl::access::mode;
 NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
     : step_num(0),
     grid_stride(vgc),
-    vg_width((width-1)/vgc + 1),
-    vg_height((height-1)/vgc + 1),
+    vg_width((width)/vgc + 1),
+    vg_height((height)/vgc + 1),
     im_width(width),
     im_height(height),
     racc_grid(sycl::range<2>(vg_width, vg_height)),
@@ -34,7 +34,21 @@ NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
         {
             w_racc[item] = 0.f;
             w_rvel[item] = 0.f;
-            w_vec[item]  = sycl::float2(1.f, 0.f); // X axis
+
+            size_t s = 411*item.get_id(0) + 3241*item.get_id(1) + 33;
+            s ^= size_t(0xAF63D2910);
+            s ^= s << 17;
+            s ^= s >> 13;
+            s ^= s << 5;
+            float r = float(s & 0xFFFF) / float(0x8000); // [0,2]
+            r = (r-1.f) * 0.5f;
+            float j = s & 0x10000 ? -1.f : 1.f;
+
+            // Pseudorandom inital vector
+            w_vec[item]  = sycl::float2(
+                r, 
+                j * sycl::sqrt(1.f - r*r)
+            );
         });
     });
 
@@ -198,29 +212,6 @@ const char* NoiseEnv::render() {
             // Testing
             size_t s; float r;
 
-            #define DO_RAND(a,b) {\
-                s = (a+17)*(b+13); \
-                s ^= size_t(0xA83B5D194); \
-                s ^= s << 17; \
-                s ^= s >> 13; \
-                s ^= s <<  5; \
-                r = float(s & 0xFFFF) / float(0x4000) - 2.f; \
-            }
-
-            // DO_RAND(gx0, gy0);
-            // d00 = r;
-
-            // DO_RAND(gx0, gy1);
-            // d01 = r;
-
-            // DO_RAND(gx1, gy0);
-            // d10 = r;
-
-            // DO_RAND(gx1, gy1);
-            // d11 = r;
-
-            // #undef DO_RAND
-
             // Weights for dot products : Smooth step function f(x) = 3x^2 - 2x^3
             float lowx = xoff0*xoff0*(3 - 2*xoff0);
             float lowy = yoff0*yoff0*(3 - 2*yoff0);
@@ -236,7 +227,7 @@ const char* NoiseEnv::render() {
             );
 
             hue += 2.f;
-            hue *= 0.25f; // Rescale dot
+            // hue *= 0.25f; // Rescale hue
             hue -= int(hue); // Get fractional portion
 
             size_t on = 1; //(ix0 + iy0) % 2;
