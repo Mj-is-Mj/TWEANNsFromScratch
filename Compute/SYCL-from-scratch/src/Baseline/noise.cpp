@@ -189,11 +189,37 @@ const char* NoiseEnv::render() {
             auto g10 = r_vec[sycl::id<2>(gx1, gy0)];
             auto g11 = r_vec[sycl::id<2>(gx1, gy1)];
 
-            // Get dot products : float [0,2]
+            // Get dot products : float [-2,2]
             float d00 = g00.x()*xoff0 + g00.y()*yoff0;
             float d01 = g01.x()*xoff0 + g01.y()*yoff1;
             float d10 = g10.x()*xoff1 + g10.y()*yoff0;
             float d11 = g11.x()*xoff1 + g11.y()*yoff1;
+
+            // Testing
+            size_t s; float r;
+
+            #define DO_RAND(a,b) {\
+                s = (a+17)*(b+13); \
+                s ^= size_t(0xA83B5D194); \
+                s ^= s << 17; \
+                s ^= s >> 13; \
+                s ^= s <<  5; \
+                r = float(s & 0xFFFF) / float(0x4000) - 2.f; \
+            }
+
+            // DO_RAND(gx0, gy0);
+            // d00 = r;
+
+            // DO_RAND(gx0, gy1);
+            // d01 = r;
+
+            // DO_RAND(gx1, gy0);
+            // d10 = r;
+
+            // DO_RAND(gx1, gy1);
+            // d11 = r;
+
+            // #undef DO_RAND
 
             // Weights for dot products : Smooth step function f(x) = 3x^2 - 2x^3
             float lowx = xoff0*xoff0*(3 - 2*xoff0);
@@ -201,17 +227,16 @@ const char* NoiseEnv::render() {
             float highx = 1.f-lowx;
             float highy = 1.f-lowy;
 
-            // Interpolate dot products using weights given by smooth step function : float [0,2]
+            // Interpolate dot products using weights given by smooth step function : float [-2,2]
             float hue = (
-                d00*(lowx *lowy ) + 
-                d01*(lowx *highy) +
-                d10*(highx*lowy ) +
-                d11*(highx*highy)
+                d00*(highx*highy) + 
+                d01*(highx*lowy ) +
+                d10*(lowx *highy) +
+                d11*(lowx *lowy )
             );
 
-            // hue = d11;
-
-            hue *= 0.5f; // Rescale dot
+            hue += 2.f;
+            hue *= 0.25f; // Rescale dot
             hue -= int(hue); // Get fractional portion
 
             size_t on = 1; //(ix0 + iy0) % 2;
