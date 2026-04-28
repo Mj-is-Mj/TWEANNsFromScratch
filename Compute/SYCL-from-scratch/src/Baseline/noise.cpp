@@ -7,8 +7,8 @@ using sycl::access::mode;
 NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
     : step_num(0),
     grid_stride(vgc),
-    vg_width(1 + vgc),
-    vg_height(1 + ((height+1)*vgc-1)/width),
+    vg_width((width-1)/vgc + 1),
+    vg_height((height-1)/vgc + 1),
     im_width(width),
     im_height(height),
     racc_grid(sycl::range<2>(vg_width, vg_height)),
@@ -69,8 +69,8 @@ void NoiseEnv::step() {
         auto rw_vec  = vec_grid.get_access<mode::read_write>(cgh);
 
         // Avoid capturing `this`
-        auto grid_width   = vg_width;
-        auto grid_height  = vg_height;
+        size_t grid_width  = vg_width;
+        size_t grid_height = vg_height;
 
         // Vector-grid operations
         cgh.parallel_for(
@@ -158,52 +158,50 @@ const char* NoiseEnv::render() {
         auto w_img = img.write().get_access<mode::write>(cgh);
 
         // Avoid capturing `this`
-        auto grid_width   = vg_width;
-        auto grid_height  = vg_height;
-        auto image_width  = im_width;
-        auto image_height = im_height;
-        auto gstride      = grid_stride;
-        constexpr float PI = 3.1415926535f;
-        constexpr float PIPI = 2*PI;
+        const size_t grid_width   = vg_width;
+        const size_t grid_height  = vg_height;
+        const size_t image_width  = im_width;
+        const size_t image_height = im_height;
+        const ssize_t gstride      = grid_stride;
+        const float inv_stride    = 1.f / float(gstride);
 
         cgh.parallel_for(
             sycl::range<2>(image_width, image_height),
             [=](sycl::item<2> item)
         {
-            size_t ix0 = item.get_id(0) / 12;
-            size_t iy0 = item.get_id(1) / 12;
-            size_t ix1 = ix0+1;
-            size_t iy1 = iy0+1;
+            ssize_t ix = item.get_id(0);
+            ssize_t iy = item.get_id(1);
+
+            ssize_t gx0 = ix / gstride;
+            ssize_t gy0 = iy / gstride;
+            ssize_t gx1 = gx0+1;
+            ssize_t gy1 = gy0+1;
             
-            // Get values for offset vectors [0,11]
-            float xoff0 = item.get_id(0) - 12*ix0;
-            float xoff1 = item.get_id(0) - 12*ix1;
-            float yoff0 = item.get_id(1) - 12*iy0;
-            float yoff1 = item.get_id(1) - 12*iy1;
+            // Get values for offset vectors : float (-1,1)
+            float xoff0 = float(ix - gstride*gx0)*inv_stride;
+            float xoff1 = float(ix - gstride*gx1)*inv_stride;
+            float yoff0 = float(iy - gstride*gy0)*inv_stride;
+            float yoff1 = float(iy - gstride*gy1)*inv_stride;
 
-            // Get gradient vectors
-            auto g00 = r_vec[sycl::id<2>(ix0, iy0)];
-            auto g01 = r_vec[sycl::id<2>(ix0, iy1)];
-            auto g10 = r_vec[sycl::id<2>(ix1, iy0)];
-            auto g11 = r_vec[sycl::id<2>(ix1, iy1)];
+            // Get gradient vectors : normalized vectors <float,float>
+            auto g00 = r_vec[sycl::id<2>(gx0, gy0)];
+            auto g01 = r_vec[sycl::id<2>(gx0, gy1)];
+            auto g10 = r_vec[sycl::id<2>(gx1, gy0)];
+            auto g11 = r_vec[sycl::id<2>(gx1, gy1)];
 
-            // Get dot products
+            // Get dot products : float [0,2]
             float d00 = g00.x()*xoff0 + g00.y()*yoff0;
             float d01 = g01.x()*xoff0 + g01.y()*yoff1;
             float d10 = g10.x()*xoff1 + g10.y()*yoff0;
             float d11 = g11.x()*xoff1 + g11.y()*yoff1;
 
-            float lowx = xoff0 * (1.f/12.f);
-            float lowy = yoff0 * (1.f/12.f);
-
-            // Smooth step function 3x^2 - 2x^3
-            lowx = lowx*lowx*(3 - 2*lowx);
-            lowy = lowy*lowy*(3 - 2*lowy);
-
+            // Weights for dot products : Smooth step function f(x) = 3x^2 - 2x^3
+            float lowx = xoff0*xoff0*(3 - 2*xoff0);
+            float lowy = yoff0*yoff0*(3 - 2*yoff0);
             float highx = 1.f-lowx;
             float highy = 1.f-lowy;
 
-            // Interpolate dot products using weights given by smooth step function
+            // Interpolate dot products using weights given by smooth step function : float [0,2]
             float hue = (
                 d00*(lowx *lowy ) + 
                 d01*(lowx *highy) +
@@ -211,13 +209,17 @@ const char* NoiseEnv::render() {
                 d11*(highx*highy)
             );
 
-            hue *= 0.1f; // Rescale dot
+            // hue = d11;
+
+            hue *= 0.5f; // Rescale dot
             hue -= int(hue); // Get fractional portion
 
+            size_t on = 1; //(ix0 + iy0) % 2;
+
             w_img[item] = sycl::uchar4(
-                static_cast<unsigned char>(255*(0.5f + 0.5f*sycl::cos(PIPI*hue))),
-                static_cast<unsigned char>(255*(0.5f + 0.5f*sycl::cos(PIPI*(hue - (1.f/3.f))))),
-                static_cast<unsigned char>(255*(0.5f + 0.5f*sycl::cos(PIPI*(hue - (2.f/3.f))))),
+                static_cast<unsigned char>(on*255*(0.5f + 0.5f*sycl::cos(PIPI*hue))),
+                static_cast<unsigned char>(on*255*(0.5f + 0.5f*sycl::cos(PIPI*(hue - (1.f/3.f))))),
+                static_cast<unsigned char>(on*255*(0.5f + 0.5f*sycl::cos(PIPI*(hue - (2.f/3.f))))),
                 static_cast<unsigned char>(255*0)
             );
         });

@@ -60,7 +60,7 @@ PerlinNoiseApp::PerlinNoiseApp(const Arguments& args) :
         Primitives::squareSolid(
         Primitives::SquareFlag::TextureCoordinates))
     },
-    noise(_h, _w, 12)
+    noise(_h, _w, 100)
 {
     // setWindowSize(Vector2i(_w,_h));
     remakeTexture();
@@ -69,7 +69,7 @@ PerlinNoiseApp::PerlinNoiseApp(const Arguments& args) :
 void PerlinNoiseApp::drawEvent() {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
-    auto data = noise.debugRender();
+    auto data = noise.render();
 
     ImageView2D img{
         PIXELFORMAT,
