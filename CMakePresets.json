@@ -1,0 +1,41 @@
+{
+    "version": 4,
+    "configurePresets": [
+        {
+            "name": "sycl-debug",
+            "displayName": "Debug",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "icx",
+                "CMAKE_CXX_COMPILER": "icpx"
+            }
+        },
+        {
+            "name": "sycl-release",
+            "displayName": "Release",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "icx",
+                "CMAKE_CXX_COMPILER": "icpx"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "sycl-debug-build",
+            "displayName": "Build Debug",
+            "configurePreset": "sycl-debug",
+            "targets": ["Baseline"]
+        },
+        {
+            "name": "sycl-release-build",
+            "displayName": "Build Release",
+            "configurePreset": "sycl-release",
+            "targets": ["Baseline"]
+        }
+    ]
+}

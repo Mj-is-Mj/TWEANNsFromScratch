@@ -1,4 +1,3 @@
-cmake_minimum_required(VERSION 3.12)
 project(SYCL-Test)
 
 # Set build type to Release if unset
@@ -9,8 +8,6 @@ endif()
 
 ### Global flags
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "" FORCE)
 
 ### Magnum

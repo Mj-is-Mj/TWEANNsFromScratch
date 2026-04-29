@@ -2,9 +2,30 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "CMake Build",
+      "label": "CMake SYCL Configure Debug",
       "type": "shell",
-      "command": "cmake --build ${workspaceFolder}/build --config Debug",
+      "command": "cmake --preset sycl-debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake SYCL Configure Release",
+      "type": "shell",
+      "command": "cmake --preset sycl-release",
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake SYCL Build Debug",
+      "type": "shell",
+      "command": "cmake --build ${workspaceFolder}/build --preset sycl-debug-build",
+      "dependsOn": "CMake SYCL Configure Debug",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CMake SYCL Build",
+      "type": "shell",
+      "command": "cmake --build ${workspaceFolder}/build --preset sycl-release-build",
+      "dependsOn": "CMake SYCL Configure Release",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$gcc"]
     }

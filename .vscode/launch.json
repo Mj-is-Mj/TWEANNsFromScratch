@@ -5,10 +5,10 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Debug SYCL (CPU)",
+            "name": "Debug SYCL",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${command:cmake.launchTargetPath}",
+            "program": "${workspaceRoot}/build/debug/${command:cmake.launchTargetFilename}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -23,8 +23,28 @@
                 "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "CMake Build"
+            "preLaunchTask": "CMake SYCL Build Debug"
+        },
+        {
+            "name": "Launch SYCL",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/build/release/${command:cmake.launchTargetFilename}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb-oneapi",
+            "setupCommands": [
+                {
+                "description": "Enable pretty-printing",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "CMake SYCL Build"
         }
-
     ]
 }

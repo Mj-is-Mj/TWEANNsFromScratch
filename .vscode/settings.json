@@ -1,4 +1,3 @@
 {
   "cmake.generator": "Unix Makefiles",
-  "cmake.sourceDirectory": "/home/mjball/Documents/Repos/GradProject/Compute/SYCL-from-scratch"
 }
