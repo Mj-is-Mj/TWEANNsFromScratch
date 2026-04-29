@@ -1,14 +1,16 @@
 #include "noise.hpp"
-
-#include <random>
+#include "util.hpp"
 using sycl::access::mode;
 
 
-NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc)
+NoiseEnv::NoiseEnv(size_t width, size_t height, size_t vgc, size_t steps_per_rando, float max_angle, float vel_limiter)
     : step_num(0),
-    grid_stride(vgc),
-    vg_width((width)/vgc + 1),
-    vg_height((height)/vgc + 1),
+    spr(steps_per_rando),
+    max_theta(max_angle/float(spr)),
+    vls(max_theta*vel_limiter),
+    grid_stride(MAX(vgc,size_t{2})),
+    vg_width((width-1)/vgc + 2),
+    vg_height((height-1)/vgc + 2),
     im_width(width),
     im_height(height),
     racc_grid(sycl::range<2>(vg_width, vg_height)),
@@ -83,8 +85,9 @@ void NoiseEnv::step() {
         auto rw_vec  = vec_grid.get_access<mode::read_write>(cgh);
 
         // Avoid capturing `this`
-        size_t grid_width  = vg_width;
-        size_t grid_height = vg_height;
+        const size_t grid_width  = vg_width;
+        const size_t grid_height = vg_height;
+        const float  VLS         = vls;
 
         // Vector-grid operations
         cgh.parallel_for(
@@ -124,7 +127,7 @@ void NoiseEnv::step() {
 
     });
 
-    if (step_num % 64 == 0) randomize();
+    if (step_num % spr == 0) randomize();
 }
 
 void NoiseEnv::randomize() {
@@ -139,6 +142,9 @@ void NoiseEnv::randomize() {
 
     q.submit([&](sycl::handler& cgh) {
         auto w_racc = racc_grid.get_access<mode::write>(cgh);
+
+        // Avoid capturing `this`
+        const float MAX_THETA = max_theta;
 
         cgh.parallel_for(
             sycl::range<2>(vg_width, vg_height),
@@ -176,47 +182,44 @@ const char* NoiseEnv::render() {
         const size_t grid_height  = vg_height;
         const size_t image_width  = im_width;
         const size_t image_height = im_height;
-        const ssize_t gstride      = grid_stride;
+        const ssize_t gstride     = grid_stride;
         const float inv_stride    = 1.f / float(gstride);
 
         cgh.parallel_for(
             sycl::range<2>(image_width, image_height),
             [=](sycl::item<2> item)
         {
-            ssize_t ix = item.get_id(0);
-            ssize_t iy = item.get_id(1);
+            // Image indices
+            const int ix = item.get_id(0);
+            const int iy = item.get_id(1);
 
-            ssize_t gx0 = ix / gstride;
-            ssize_t gy0 = iy / gstride;
-            ssize_t gx1 = gx0+1;
-            ssize_t gy1 = gy0+1;
+            // Grid indices
+            const int gx0 = ix / gstride;
+            const int gy0 = iy / gstride;
+            const int gx1 = gx0+1;
+            const int gy1 = gy0+1;
             
             // Get values for offset vectors : float (-1,1)
-            float xoff0 = float(ix - gstride*gx0)*inv_stride;
-            float xoff1 = float(ix - gstride*gx1)*inv_stride;
-            float yoff0 = float(iy - gstride*gy0)*inv_stride;
-            float yoff1 = float(iy - gstride*gy1)*inv_stride;
-
-            // Get gradient vectors : normalized vectors <float,float>
-            auto g00 = r_vec[sycl::id<2>(gx0, gy0)];
-            auto g01 = r_vec[sycl::id<2>(gx0, gy1)];
-            auto g10 = r_vec[sycl::id<2>(gx1, gy0)];
-            auto g11 = r_vec[sycl::id<2>(gx1, gy1)];
+            const float xoff0 = float(ix - gstride*gx0)*inv_stride;
+            const float xoff1 = float(ix - gstride*gx1)*inv_stride;
+            const float yoff0 = float(iy - gstride*gy0)*inv_stride;
+            const float yoff1 = float(iy - gstride*gy1)*inv_stride;
 
             // Get dot products : float [-2,2]
-            float d00 = g00.x()*xoff0 + g00.y()*yoff0;
-            float d01 = g01.x()*xoff0 + g01.y()*yoff1;
-            float d10 = g10.x()*xoff1 + g10.y()*yoff0;
-            float d11 = g11.x()*xoff1 + g11.y()*yoff1;
-
-            // Testing
-            size_t s; float r;
+            sycl::float2 gvec = r_vec[sycl::id<2>(gx0, gy0)];
+            const float d00 = gvec.x()*xoff0 + gvec.y()*yoff0;
+            gvec = r_vec[sycl::id<2>(gx0, gy1)];
+            const float d01 = gvec.x()*xoff0 + gvec.y()*yoff1;
+            gvec = r_vec[sycl::id<2>(gx1, gy0)];
+            const float d10 = gvec.x()*xoff1 + gvec.y()*yoff0;
+            gvec = r_vec[sycl::id<2>(gx1, gy1)];
+            const float d11 = gvec.x()*xoff1 + gvec.y()*yoff1;
 
             // Weights for dot products : Smooth step function f(x) = 3x^2 - 2x^3
-            float lowx = xoff0*xoff0*(3 - 2*xoff0);
-            float lowy = yoff0*yoff0*(3 - 2*yoff0);
-            float highx = 1.f-lowx;
-            float highy = 1.f-lowy;
+            const float lowx = xoff0*xoff0*(3 - 2*xoff0);
+            const float lowy = yoff0*yoff0*(3 - 2*yoff0);
+            const float highx = 1.f-lowx;
+            const float highy = 1.f-lowy;
 
             // Interpolate dot products using weights given by smooth step function : float [-2,2]
             float hue = (
@@ -227,16 +230,13 @@ const char* NoiseEnv::render() {
             );
 
             hue += 2.f;
-            // hue *= 0.25f; // Rescale hue
             hue -= int(hue); // Get fractional portion
 
-            size_t on = 1; //(ix0 + iy0) % 2;
-
             w_img[item] = sycl::uchar4(
-                static_cast<unsigned char>(on*255*(0.5f + 0.5f*sycl::cos(PIPI*hue))),
-                static_cast<unsigned char>(on*255*(0.5f + 0.5f*sycl::cos(PIPI*(hue - (1.f/3.f))))),
-                static_cast<unsigned char>(on*255*(0.5f + 0.5f*sycl::cos(PIPI*(hue - (2.f/3.f))))),
-                static_cast<unsigned char>(255*0)
+                static_cast<unsigned char>(127.5f + 127.5f*sycl::cos( PIPI*hue ) ),
+                static_cast<unsigned char>(127.5f + 127.5f*sycl::cos( PIPI*(hue-(1.f/3.f)) ) ),
+                static_cast<unsigned char>(127.5f + 127.5f*sycl::cos( PIPI*(hue-(2.f/3.f)) ) ),
+                static_cast<unsigned char>(255)
             );
         });
     });
@@ -275,11 +275,6 @@ const char* NoiseEnv::debugRender() {
             size_t gy = iy / ystride;
 
             sycl::float2 g = r_input[sycl::id<2>(gx,gy)];
-            // g *= INV_PIPI;
-            // g += 0.5f;
-            // g -= sycl::floor(g);
-
-            // size_t on = ((ix/xstride) + (iy/ystride)) % 2;
 
             float vx = (g.x()*0.5f) + 0.5f; 
             float vy = (g.y()*0.5f) + 0.5f;

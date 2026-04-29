@@ -20,6 +20,10 @@
 // SYCL includes
 #include "noise.hpp"
 
+static constexpr size_t sclTex(float t) {
+    return size_t(floor(t*1.f));
+}
+
 using namespace Magnum;
 
 constexpr PixelFormat PIXELFORMAT{PixelFormat::RGBA8Unorm};
@@ -53,18 +57,21 @@ PerlinNoiseApp::PerlinNoiseApp(const Arguments& args) :
             Shaders::FlatGL2D::Flag::TextureTransformation
         )
     },
-    _w(windowSize().x()),
-    _h(windowSize().y()),
+    _w(sclTex(windowSize().x())),
+    _h(sclTex(windowSize().y())),
     _mesh{
         MeshTools::compile(
         Primitives::squareSolid(
         Primitives::SquareFlag::TextureCoordinates))
     },
-    noise(_h, _w, 48)
+    noise(_h, _w, 32)
 {
     // setWindowSize(Vector2i(_w,_h));
     remakeTexture();
 }
+
+static int steps = 0;
+static int frames = 0;
 
 void PerlinNoiseApp::drawEvent() {
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
@@ -87,13 +94,42 @@ void PerlinNoiseApp::drawEvent() {
     redraw();
     swapBuffers();
 
-    // ~60fps
-    std::this_thread::sleep_for(std::chrono::milliseconds(16));
+
+    using Clock = std::chrono::steady_clock;
+
+    static std::chrono::time_point<Clock> start=Clock::now(), end{};
+
+    if (++frames >= 300) {
+        end = Clock::now();
+        double duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+        double frametime = duration / double(frames);
+        double steptime  = duration / double(steps);
+        double fps = 1000.0 / frametime;
+        double sps = 1000.0 / steptime;
+
+        printf(
+            "Elapsed =%6.0lfms | Frames =%4d | Steps =%4d\n"
+            "\tFrametime = %6.2lfms | FPS=%6.2lf\n"
+            "\tSteptime  = %6.2lfms | SPS=%6.2lf\n",
+            duration,
+            frames,
+            steps,
+            frametime,
+            fps,
+            steptime,
+            sps
+        );
+
+        frames = 0;
+        steps = 0;
+        start = end;
+    }
 }
 
 void PerlinNoiseApp::tickEvent() {
     if (paused) { return; }
     noise.step();
+    ++steps;
 }
 
 void PerlinNoiseApp::remakeTexture() {

@@ -1,10 +1,10 @@
 #pragma once
 
-#include "../include/doublebuf.hpp"
+#include "doublebuf.hpp"
 
 #include <sycl/sycl.hpp>
 
-static auto constexpr Q_LAMBDA = [](sycl::exception_list el) {
+auto constexpr Q_LAMBDA = [](sycl::exception_list el) {
     for (auto e : el) {
         try {
             std::rethrow_exception(e);
@@ -14,22 +14,23 @@ static auto constexpr Q_LAMBDA = [](sycl::exception_list el) {
     }
 };
 
+
+#define PIPI        2.f*3.1415926535f
+#define INV_PIPI    1.f / PIPI
+
 class NoiseEnv {
 
     public:
-        static constexpr float PIPI = 2.f*3.1415926535f;
-        static constexpr float INV_PIPI = 1.f / PIPI;
-
-        static constexpr size_t STEPS_PER_RANDO = 12;
-        static constexpr float MAX_THETA = 0.01f*PIPI / float(STEPS_PER_RANDO);
-        static constexpr float VLS = MAX_THETA*8.f; // Velocity limiter strength
+        const size_t spr; // Steps per randomize
+        const float max_theta;
+        const float vls; // Velocity limiter strength
 
         const size_t vg_width, vg_height;
         const size_t im_width, im_height;
         const size_t grid_stride;
         size_t step_num;
 
-        NoiseEnv(size_t width, size_t height, size_t vgc=12);
+        NoiseEnv(size_t width, size_t height, size_t vgc=12, size_t steps_per_rando=12, float max_angle=0.01f*PIPI, float vel_limiter=8.f);
 
         // Updates the vector grid, updating perlin noise
         void step();
