@@ -10,7 +10,8 @@
             "compilerPath": "/opt/intel/oneapi/compiler/latest/bin/icpx",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "linux-clang-x64"
+            "intelliSenseMode": "linux-clang-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

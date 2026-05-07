@@ -1,5 +1,6 @@
 #include "noise.hpp"
 #include "util.hpp"
+#include "sycl_util.hpp"
 using sycl::access::mode;
 
 

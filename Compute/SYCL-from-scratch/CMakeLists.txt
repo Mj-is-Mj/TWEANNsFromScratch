@@ -21,3 +21,4 @@ include(SYCLBackendConfig.cmake)
 
 ### Modules
 add_subdirectory(src/Baseline)
+add_subdirectory(src/CellularAutomataTest)
