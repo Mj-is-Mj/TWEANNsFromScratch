@@ -1,13 +1,25 @@
 {
     "configurations": [
         {
-            "name": "Linux",
+            "name": "SYCL",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/intel/oneapi/compiler/latest/include/"
             ],
             "defines": [],
             "compilerPath": "/opt/intel/oneapi/compiler/latest/bin/icpx",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "linux-clang-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        },
+        {
+            "name": "G++",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/g++",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "linux-clang-x64",

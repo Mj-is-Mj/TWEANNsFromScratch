@@ -3,39 +3,71 @@
     "configurePresets": [
         {
             "name": "sycl-debug",
-            "displayName": "Debug",
+            "displayName": "SYCL Debug",
             "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/build/debug",
+            "binaryDir": "${sourceDir}/build/sycl-debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_C_COMPILER": "icx",
-                "CMAKE_CXX_COMPILER": "icpx"
+                "CMAKE_CXX_COMPILER": "icpx",
+                "USE_SYCL": true
             }
         },
         {
             "name": "sycl-release",
-            "displayName": "Release",
+            "displayName": "SYCL Release",
             "generator": "Unix Makefiles",
-            "binaryDir": "${sourceDir}/build/release",
+            "binaryDir": "${sourceDir}/build/sycl-release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_C_COMPILER": "icx",
-                "CMAKE_CXX_COMPILER": "icpx"
+                "CMAKE_CXX_COMPILER": "icpx",
+                "USE_SYCL": true
+            }
+        },
+        {
+            "name": "gcc-debug",
+            "displayName": "GCC Debug",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/gcc-debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
+            }
+        },
+        {
+            "name": "gcc-release",
+            "displayName": "GCC Release",
+            "generator": "Unix Makefiles",
+            "binaryDir": "${sourceDir}/build/gcc-release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "gcc",
+                "CMAKE_CXX_COMPILER": "g++"
             }
         }
     ],
     "buildPresets": [
         {
             "name": "sycl-debug-build",
-            "displayName": "Build Debug",
-            "configurePreset": "sycl-debug",
-            "targets": ["Baseline"]
+            "displayName": "SYCL Build Debug",
+            "configurePreset": "sycl-debug"
         },
         {
             "name": "sycl-release-build",
-            "displayName": "Build Release",
-            "configurePreset": "sycl-release",
-            "targets": ["Baseline"]
+            "displayName": "SYCL Build Release",
+            "configurePreset": "sycl-release"
+        },
+        {
+            "name": "gcc-debug-build",
+            "displayName": "GCC Build Debug",
+            "configurePreset": "gcc-debug"
+        },
+        {
+            "name": "gcc-release-build",
+            "displayName": "GCC Build Release",
+            "configurePreset": "gcc-release"
         }
     ]
 }

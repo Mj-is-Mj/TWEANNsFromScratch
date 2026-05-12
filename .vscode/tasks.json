@@ -28,6 +28,35 @@
       "dependsOn": "CMake SYCL Configure Release",
       "group": { "kind": "build", "isDefault": true },
       "problemMatcher": ["$gcc"]
+    },
+
+    {
+      "label": "CMake GCC Configure Debug",
+      "type": "shell",
+      "command": "cmake --preset gcc-debug",
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake GCC Configure Release",
+      "type": "shell",
+      "command": "cmake --preset gcc-release",
+      "problemMatcher": []
+    },
+    {
+      "label": "CMake GCC Build Debug",
+      "type": "shell",
+      "command": "cmake --build ${workspaceFolder}/build --preset gcc-debug-build --target ${command:cmake.launchTargetFilename}",
+      "dependsOn": "CMake GCC Configure Debug",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
+    },
+    {
+      "label": "CMake GCC Build",
+      "type": "shell",
+      "command": "cmake --build ${workspaceFolder}/build --preset gcc-release-build --target ${command:cmake.launchTargetFilename}",
+      "dependsOn": "CMake GCC Configure Release",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"]
     }
   ]
 }

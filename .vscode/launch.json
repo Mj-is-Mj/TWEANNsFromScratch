@@ -8,11 +8,9 @@
             "name": "Debug SYCL",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/debug/${command:cmake.launchTargetFilename}",
-            "args": [],
+            "program": "${command:cmake.launchTargetPath}",
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
-            "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",
             "miDebuggerPath": "gdb-oneapi",
@@ -29,7 +27,7 @@
             "name": "Launch SYCL",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceRoot}/build/release/${command:cmake.launchTargetFilename}",
+            "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -45,6 +43,44 @@
                 }
             ],
             "preLaunchTask": "CMake SYCL Build"
+        },
+        {
+            "name": "Debug GCC",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                "description": "Enable pretty-printing",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "CMake SYCL Build Debug"
+        },
+        {
+            "name": "Launch GCC",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "gdb",
+            "setupCommands": [
+                {
+                "description": "Enable pretty-printing",
+                "text": "-enable-pretty-printing",
+                "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "CMake GCC Build"
         }
     ]
 }

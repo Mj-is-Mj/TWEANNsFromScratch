@@ -169,7 +169,7 @@ void PerlinNoiseApp::keyPressEvent(KeyEvent& event) {
             break;
         case Sdl2Application::Key::Down:
             steps_per_frame -= 1 + (steps_per_frame >> 4);
-            steps_per_frame = MIN(steps_per_frame,1);
+            steps_per_frame = MAX(steps_per_frame,1);
             break;
         default:
             break;

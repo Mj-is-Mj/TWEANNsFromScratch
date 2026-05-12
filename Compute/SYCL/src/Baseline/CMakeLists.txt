@@ -14,4 +14,3 @@ target_link_libraries(Baseline PRIVATE
 
 target_compile_options(Baseline PUBLIC ${SYCL_FLAGS} -Wno-c++20-extensions)
 target_link_options(Baseline PUBLIC ${SYCL_FLAGS})
-message("SYCL_FLAGS=${SYCL_FLAGS}")

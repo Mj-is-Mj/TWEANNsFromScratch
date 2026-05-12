@@ -8,7 +8,6 @@ endif()
 
 ### Global flags
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR} CACHE PATH "" FORCE)
 
 ### Magnum
 set(IMGUI_DIR "~/libs/imgui")
@@ -17,7 +16,6 @@ find_package(MagnumIntegration REQUIRED ImGui)
 
 ### SYCL
 include(SYCLBackendConfig.cmake)
-
 
 ### Modules
 add_subdirectory(src/Baseline)

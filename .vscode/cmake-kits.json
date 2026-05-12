@@ -8,5 +8,12 @@
     "environmentVariables": {
       "PATH": "/opt/intel/oneapi/compiler/latest/bin:${env:PATH}"
     }
+  },
+  {
+    "name": "GNU GCC/G++",
+    "compilers": {
+      "CXX": "g++",
+      "C": "gcc"
+    }
   }
 ]
