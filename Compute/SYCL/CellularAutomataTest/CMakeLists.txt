@@ -1,7 +1,7 @@
-file(GLOB GENERAL_SOURCES "*.cpp")
+file(GLOB LOCAL_SOURCES "*.cpp")
 
-add_executable(CellularAutomata ${GENERAL_SOURCES} main.cpp)
-target_include_directories(CellularAutomata PRIVATE "../include")
+add_executable(CellularAutomata ${GENERAL_SOURCE} ${LOCAL_SOURCES} main.cpp)
+target_include_directories(CellularAutomata PRIVATE "../${GENERAL_INCLUDE}")
 
 
 target_link_libraries(CellularAutomata PRIVATE 

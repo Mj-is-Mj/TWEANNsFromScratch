@@ -1,4 +1,4 @@
-project(SYCL-Test)
+project(SYCL-Tests)
 
 # Set build type to Release if unset
 if(CMAKE_BUILD_TYPE STREQUAL "")
@@ -17,6 +17,10 @@ find_package(MagnumIntegration REQUIRED ImGui)
 ### SYCL
 include(SYCLBackendConfig.cmake)
 
+### General stuff
+file(GLOB GENERAL_SOURCES "general/src/*.cpp")
+set(GENERAL_INCLUDE "general/inc/")
+
 ### Modules
-add_subdirectory(src/Baseline)
-add_subdirectory(src/CellularAutomataTest)
+add_subdirectory(PerlinNoise)
+add_subdirectory(CellularAutomataTest)
